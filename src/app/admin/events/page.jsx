@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -26,6 +25,7 @@ export default function AdminEventsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [error, setError] = useState(null);
 
   const categories = [
     'all',
@@ -44,14 +44,39 @@ export default function AdminEventsPage() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `/api/admin/events?page=${currentPage}&limit=12&search=${searchTerm}&category=${categoryFilter}`,
-      );
+      setError(null);
+
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const url = `${API_URL}/api/admin/events`;
+
+      console.log('📡 Fetching events from:', url);
+
+      const res = await fetch(url);
       const data = await res.json();
-      setEvents(data.events || []);
-      setTotalPages(data.totalPages || 1);
+      console.log('📦 Full Response:', data);
+
+      // 🔥 ব্যাকএন্ডের response format: { success: true, events: [...] }
+      let eventsData = [];
+      if (data.events && Array.isArray(data.events)) {
+        eventsData = data.events;
+        console.log('✅ Found events in data.events:', eventsData.length);
+      } else if (data.data && Array.isArray(data.data)) {
+        eventsData = data.data;
+        console.log('✅ Found events in data.data:', eventsData.length);
+      } else if (Array.isArray(data)) {
+        eventsData = data;
+        console.log('✅ Found events in array:', eventsData.length);
+      } else {
+        console.log('⚠️ No events found in response');
+      }
+
+      setEvents(eventsData);
+      setTotalPages(Math.ceil(eventsData.length / 12) || 1);
     } catch (error) {
       console.error('Error fetching events:', error);
+      setError(error.message);
       toast.error('Failed to load events');
     } finally {
       setLoading(false);
@@ -60,9 +85,13 @@ export default function AdminEventsPage() {
 
   const handleDeleteEvent = async eventId => {
     try {
-      const res = await fetch(`/api/admin/events/${eventId}`, {
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const res = await fetch(`${API_URL}/api/admin/events/${eventId}`, {
         method: 'DELETE',
       });
+
       if (res.ok) {
         toast.success('Event deleted successfully');
         fetchEvents();
@@ -70,6 +99,7 @@ export default function AdminEventsPage() {
         toast.error('Failed to delete event');
       }
     } catch (error) {
+      console.error('Error deleting event:', error);
       toast.error('Error deleting event');
     }
     setShowDeleteModal(false);
@@ -100,16 +130,54 @@ export default function AdminEventsPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-purple-200 rounded-full"></div>
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-600">Error: {error}</p>
+        <button
+          onClick={fetchEvents}
+          className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Event Management
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+        <p className="text-gray-500 text-sm mt-1">
           Manage all events on the platform
         </p>
+      </div>
+
+      {/* Debug Info - Shows how many events found */}
+      <div
+        className={`rounded-lg p-3 text-sm ${events.length > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+      >
+        <p>
+          📊 Total Events Found: <strong>{events.length}</strong>
+        </p>
+        {events.length === 0 && (
+          <p className="text-xs mt-1">
+            No events in database. Create some events first.
+          </p>
+        )}
       </div>
 
       {/* Filters */}
@@ -124,39 +192,33 @@ export default function AdminEventsPage() {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white"
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-purple-500"
           />
         </div>
-        <div className="flex gap-2">
-          <select
-            value={categoryFilter}
-            onChange={e => {
-              setCategoryFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white"
-          >
-            {categories.map(cat => (
-              <option key={cat} value={cat}>
-                {cat === 'all' ? 'All Categories' : cat}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={categoryFilter}
+          onChange={e => {
+            setCategoryFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-purple-500"
+        >
+          {categories.map(cat => (
+            <option key={cat} value={cat}>
+              {cat === 'all' ? 'All Categories' : cat}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Events Grid */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="relative">
-            <div className="w-12 h-12 border-4 border-purple-200 rounded-full"></div>
-            <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-          </div>
-        </div>
-      ) : events.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center">
+      {events.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
           <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">No events found</p>
+          <p className="text-gray-400 text-sm mt-1">
+            Create events from the user dashboard to see them here
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -166,13 +228,20 @@ export default function AdminEventsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
+              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="relative h-40">
                 <img
-                  src={event.image}
+                  src={
+                    event.image ||
+                    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400'
+                  }
                   alt={event.title}
                   className="w-full h-full object-cover"
+                  onError={e => {
+                    e.target.src =
+                      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400';
+                  }}
                 />
                 <div className="absolute top-2 right-2">
                   {getStatusBadge(event.date)}
@@ -184,7 +253,7 @@ export default function AdminEventsPage() {
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">
+                <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">
                   {event.title}
                 </h3>
                 <p className="text-xs text-gray-500 mb-2 line-clamp-2">
@@ -207,19 +276,22 @@ export default function AdminEventsPage() {
                   <div className="flex-1"></div>
                   <button
                     onClick={() => setSelectedEvent(event)}
-                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    className="p-1.5 hover:bg-gray-100 rounded-lg"
                   >
                     <Eye className="w-4 h-4 text-gray-500" />
                   </button>
-                  <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                  <Link
+                    href={`/admin/events/${event._id}/edit`}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg"
+                  >
                     <Edit className="w-4 h-4 text-gray-500" />
-                  </button>
+                  </Link>
                   <button
                     onClick={() => {
                       setSelectedEvent(event);
                       setShowDeleteModal(true);
                     }}
-                    className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                    className="p-1.5 hover:bg-red-50 rounded-lg"
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </button>
@@ -240,14 +312,14 @@ export default function AdminEventsPage() {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 hover:bg-gray-50"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 hover:bg-gray-50"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -258,13 +330,13 @@ export default function AdminEventsPage() {
       {/* Delete Modal */}
       {showDeleteModal && selectedEvent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Delete Event
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+            <p className="text-gray-500 text-sm mb-6">
               Are you sure you want to delete{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="font-medium text-gray-900">
                 {selectedEvent.title}
               </span>
               ? This action cannot be undone.
@@ -272,13 +344,13 @@ export default function AdminEventsPage() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteEvent(selectedEvent._id)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
               >
                 Delete Event
               </button>

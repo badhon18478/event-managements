@@ -1,15 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useContext, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/AuthContext/AuthProvider';
+import { AuthContext } from '@/AuthContext/AuthProvider';
 import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { Eye, EyeOff, Mail, Lock, LogIn } from 'lucide-react';
 
-export default function Login() {
-  const { signInUser, signInGoogle } = useAuth();
+/* =========================
+   WRAPPER (FIX BUILD ERROR)
+========================= */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <Login />
+    </Suspense>
+  );
+}
+
+/* =========================
+   MAIN LOGIN COMPONENT
+========================= */
+function Login() {
+  const { signInUser, signInGoogle } = useContext(AuthContext);
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get('from') || '/';
@@ -38,6 +52,7 @@ export default function Login() {
       router.replace(from);
     } catch (error) {
       console.error('Login error:', error);
+
       if (error.code === 'auth/user-not-found') {
         toast.error('No account found with this email');
       } else if (error.code === 'auth/wrong-password') {
@@ -68,7 +83,7 @@ export default function Login() {
       <div className="flex items-center justify-center px-4 py-12">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-            {/* Header */}
+            {/* HEADER (UNCHANGED DESIGN) */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-10 text-center">
               <div className="bg-white/20 backdrop-blur-sm w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <LogIn className="w-10 h-10 text-white" />
@@ -79,10 +94,10 @@ export default function Login() {
               <p className="text-purple-100">Login to access your account</p>
             </div>
 
-            {/* Form */}
+            {/* FORM (UNCHANGED DESIGN) */}
             <div className="p-8">
               <form onSubmit={handleLogin} className="space-y-6">
-                {/* Email Field */}
+                {/* EMAIL */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Email Address
@@ -101,7 +116,7 @@ export default function Login() {
                   </div>
                 </div>
 
-                {/* Password Field */}
+                {/* PASSWORD */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Password
@@ -117,6 +132,7 @@ export default function Login() {
                       className="w-full pl-11 pr-12 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none"
                       placeholder="Enter your password"
                     />
+
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -131,7 +147,7 @@ export default function Login() {
                   </div>
                 </div>
 
-                {/* Forgot Password Link */}
+                {/* FORGOT PASSWORD */}
                 <div className="text-right">
                   <Link
                     href="/forget-password"
@@ -141,7 +157,7 @@ export default function Login() {
                   </Link>
                 </div>
 
-                {/* Login Button */}
+                {/* LOGIN BUTTON */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -162,7 +178,7 @@ export default function Login() {
                 </button>
               </form>
 
-              {/* Divider */}
+              {/* DIVIDER */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300"></div>
@@ -174,7 +190,7 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Google Login */}
+              {/* GOOGLE LOGIN */}
               <button
                 onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center gap-3 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold text-gray-700"
@@ -183,7 +199,7 @@ export default function Login() {
                 Continue with Google
               </button>
 
-              {/* Register Link */}
+              {/* REGISTER */}
               <p className="text-center mt-6 text-gray-600">
                 Don't have an account?{' '}
                 <Link

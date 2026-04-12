@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import {
   Search,
-  MoreVertical,
+  Eye,
   Edit,
   Trash2,
-  Eye,
   UserPlus,
-  Filter,
   ChevronLeft,
   ChevronRight,
+  Shield,
+  UserX,
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -24,6 +24,7 @@ export default function AdminUsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -32,40 +33,79 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `/api/admin/users?page=${currentPage}&limit=10&search=${searchTerm}`,
-      );
+      setError(null);
+
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const url = `${API_URL}/api/admin/users`;
+
+      console.log('📡 Fetching users from:', url);
+
+      const res = await fetch(url);
       const data = await res.json();
-      setUsers(data.users || []);
-      setTotalPages(data.totalPages || 1);
+      console.log('📦 Response:', data);
+
+      if (data.success && data.users) {
+        setUsers(data.users);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        setUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setError(error.message);
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteUser = async userId => {
+  const handleBlockUser = async userId => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const res = await fetch(`${API_URL}/api/admin/users/${userId}/block`, {
+        method: 'POST',
       });
+
       if (res.ok) {
-        toast.success('User deleted successfully');
+        toast.success('User blocked successfully');
         fetchUsers();
       } else {
-        toast.error('Failed to delete user');
+        toast.error('Failed to block user');
       }
     } catch (error) {
-      toast.error('Error deleting user');
+      toast.error('Error blocking user');
     }
-    setShowDeleteModal(false);
-    setSelectedUser(null);
   };
 
-  const getRoleBadge = email => {
-    if (email === 'admin@eventhub.com') {
+  const handleMakeAdmin = async userId => {
+    try {
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const res = await fetch(
+        `${API_URL}/api/admin/users/${userId}/make-admin`,
+        {
+          method: 'POST',
+        },
+      );
+
+      if (res.ok) {
+        toast.success('User promoted to admin');
+        fetchUsers();
+      } else {
+        toast.error('Failed to make admin');
+      }
+    } catch (error) {
+      toast.error('Error making admin');
+    }
+  };
+
+  const getRoleBadge = (role, email) => {
+    if (role === 'admin' || email === 'admin@eventhub.com') {
       return (
         <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
           Super Admin
@@ -79,6 +119,31 @@ export default function AdminUsersPage() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-purple-200 rounded-full"></div>
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-600">Error: {error}</p>
+        <button
+          onClick={fetchUsers}
+          className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -87,8 +152,8 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             User Management
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Manage all registered users
+          <p className="text-gray-500 text-sm mt-1">
+            Manage all registered users ({users.length} total)
           </p>
         </div>
         <div className="flex gap-3">
@@ -102,7 +167,7 @@ export default function AdminUsersPage() {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:text-white"
+              className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-purple-500"
             />
           </div>
           <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center gap-2">
@@ -112,43 +177,43 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Debug Info */}
+      <div
+        className={`rounded-lg p-3 text-sm ${users.length > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+      >
+        <p>
+          📊 Total Users Found: <strong>{users.length}</strong>
+        </p>
+      </div>
+
       {/* Users Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Joined
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Events
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Spent
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-5 py-12 text-center">
-                    <div className="flex justify-center">
-                      <div className="w-8 h-8 border-4 border-purple-200 rounded-full"></div>
-                      <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute"></div>
-                    </div>
-                  </td>
-                </tr>
-              ) : users.length === 0 ? (
+            <tbody className="divide-y divide-gray-100">
+              {users.length === 0 ? (
                 <tr>
                   <td
                     colSpan="6"
@@ -164,7 +229,7 @@ export default function AdminUsersPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
@@ -175,44 +240,53 @@ export default function AdminUsersPage() {
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-white text-sm">
+                          <p className="font-medium text-gray-900 text-sm">
                             {user.displayName || 'User'}
                           </p>
                           <p className="text-xs text-gray-500">{user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3">{getRoleBadge(user.email)}</td>
-                    <td className="px-5 py-3 text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                    <td className="px-5 py-3">
+                      {getRoleBadge(user.role, user.email)}
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-900 dark:text-white">
+                    <td className="px-5 py-3 text-sm text-gray-500">
+                      {user.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-900">
                       {user.eventCount || 0}
                     </td>
                     <td className="px-5 py-3 text-sm font-semibold text-emerald-600">
                       ${(user.totalSpent || 0).toFixed(2)}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => setSelectedUser(user)}
-                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-gray-100 rounded-lg"
+                          title="View Details"
                         >
                           <Eye className="w-4 h-4 text-gray-500" />
                         </button>
-                        <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                          <Edit className="w-4 h-4 text-gray-500" />
-                        </button>
-                        {user.email !== 'admin@eventhub.com' && (
-                          <button
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowDeleteModal(true);
-                            }}
-                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </button>
+                        {user.role !== 'admin' && (
+                          <>
+                            <button
+                              onClick={() => handleMakeAdmin(user._id)}
+                              className="p-1.5 hover:bg-purple-50 rounded-lg"
+                              title="Make Admin"
+                            >
+                              <Shield className="w-4 h-4 text-purple-500" />
+                            </button>
+                            <button
+                              onClick={() => handleBlockUser(user._id)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg"
+                              title="Block User"
+                            >
+                              <UserX className="w-4 h-4 text-red-500" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -222,64 +296,7 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Delete User
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-              Are you sure you want to delete{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
-                {selectedUser.email}
-              </span>
-              ? This action cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteUser(selectedUser._id)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
-              >
-                Delete User
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

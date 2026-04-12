@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/AuthContext/AuthProvider';
+import { AuthContext } from '@/AuthContext/AuthProvider';
 import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { Eye, EyeOff, Mail, Lock, User, UserPlus } from 'lucide-react';
 
 export default function Register() {
-  const { registerUser, signInGoogle } = useAuth();
+  const { registerUser, signInGoogle } = useContext(AuthContext);
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);

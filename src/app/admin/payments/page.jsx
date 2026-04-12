@@ -6,10 +6,10 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Eye,
   CreditCard,
   DollarSign,
   User,
+  Loader2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -30,13 +30,33 @@ export default function AdminPaymentsPage() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
+      console.log('Fetching payments from API...');
+
+      // সঠিক API endpoint
       const res = await fetch(
-        `/api/admin/payments?page=${currentPage}&limit=15&search=${searchTerm}&status=${statusFilter}`,
+        `https://event-managements-server-chi.vercel.app/api/admin/payments`,
       );
       const data = await res.json();
-      setPayments(data.payments || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalAmount(data.totalAmount || 0);
+
+      console.log('API Response:', data);
+
+      // ব্যাকএন্ডের response format অনুযায়ী ডাটা সেট করুন
+      // ব্যাকএন্ড থেকে আসছে: { success: true, data: [...] }
+      if (data.success && data.data) {
+        setPayments(data.data);
+        // Calculate total amount
+        const total = data.data.reduce((sum, p) => sum + (p.amount || 0), 0);
+        setTotalAmount(total);
+        setTotalPages(Math.ceil(data.data.length / 15) || 1);
+      }
+      // অথবা যদি payments array আসে
+      else if (data.payments) {
+        setPayments(data.payments);
+        setTotalAmount(data.totalAmount || 0);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        setPayments([]);
+      }
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast.error('Failed to load payments');
@@ -66,6 +86,14 @@ export default function AdminPaymentsPage() {
       );
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -165,16 +193,7 @@ export default function AdminPaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-5 py-12 text-center">
-                    <div className="flex justify-center">
-                      <div className="w-8 h-8 border-4 border-purple-200 rounded-full"></div>
-                      <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute"></div>
-                    </div>
-                  </td>
-                </tr>
-              ) : payments.length === 0 ? (
+              {payments.length === 0 ? (
                 <tr>
                   <td
                     colSpan="6"
@@ -193,19 +212,21 @@ export default function AdminPaymentsPage() {
                     className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     <td className="px-5 py-3 text-sm text-gray-900 dark:text-white">
-                      {payment.eventTitle}
+                      {payment.eventTitle || 'N/A'}
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-500">
-                      {payment.userEmail}
+                      {payment.userEmail || 'N/A'}
                     </td>
                     <td className="px-5 py-3 text-sm font-semibold text-emerald-600">
-                      ${payment.amount}
+                      ${payment.amount || 0}
                     </td>
                     <td className="px-5 py-3 text-sm text-gray-500">
-                      {new Date(payment.createdAt).toLocaleDateString()}
+                      {payment.createdAt
+                        ? new Date(payment.createdAt).toLocaleDateString()
+                        : 'N/A'}
                     </td>
                     <td className="px-5 py-3">
-                      {getStatusBadge(payment.status)}
+                      {getStatusBadge(payment.status || 'pending')}
                     </td>
                     <td className="px-5 py-3">
                       <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -218,31 +239,6 @@ export default function AdminPaymentsPage() {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
