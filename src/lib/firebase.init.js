@@ -1,6 +1,10 @@
-// src/firebase/firebase.init.js
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+// lib/firebase.init.js
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getAuth,
+  browserLocalPersistence,
+  setPersistence,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,6 +15,29 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export default app;
+// Initialize Firebase only once
+let app;
+let auth;
+
+try {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+    console.log('Firebase initialized successfully');
+  } else {
+    app = getApp();
+    console.log('Using existing Firebase app');
+  }
+
+  auth = getAuth(app);
+
+  // Set persistence for better mobile support
+  if (typeof window !== 'undefined') {
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => console.log('Firebase persistence set for mobile'))
+      .catch(err => console.error('Persistence error:', err));
+  }
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+}
+
+export { auth, app };

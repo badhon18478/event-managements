@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
-import CheckoutContent from '../checkout/CheckoutContent'; // ← পাথ ঠিক করুন (একই ফোল্ডার)
+import CheckoutContent from './CheckoutContent';
 
-// Loading fallback component
 function CheckoutFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">

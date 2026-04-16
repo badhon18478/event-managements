@@ -20,19 +20,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState('user');
 
-  // Get API URL from environment
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    'https://event-managements-server-chi.vercel.app';
 
-  // =========================
-  // Save user to MongoDB Backend
-  // =========================
   const syncUserToBackend = async userData => {
-    if (!userData) return;
-
+    if (!userData?.email) return;
     try {
-      console.log('📡 Syncing user to backend:', userData.email);
-
-      const response = await fetch(`${API_URL}/api/users/register`, {
+      await fetch(`${API_URL}/api/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -42,40 +37,41 @@ export const AuthProvider = ({ children }) => {
           photoURL: userData.photoURL,
         }),
       });
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error('Response not OK:', text);
-        return;
-      }
-
-      const data = await response.json();
-      console.log('✅ User synced to MongoDB:', data);
-      return data;
     } catch (error) {
-      console.error('❌ Error syncing user:', error.message);
+      console.error('Sync error:', error);
     }
   };
 
-  // =========================
-  // Get user role from MongoDB
-  // =========================
   const fetchUserRole = async email => {
     if (!email) return;
     try {
-      const response = await fetch(`${API_URL}/api/users/role/${email}`);
-      const data = await response.json();
+      const res = await fetch(`${API_URL}/api/users/role/${email}`);
+      const data = await res.json();
       setUserRole(data.role || 'user');
-      return data;
     } catch (error) {
-      console.error('Error fetching role:', error);
       setUserRole('user');
     }
   };
 
-  // =========================
-  // Register with Email/Password
-  // =========================
+  // ✅ Google Sign In - সবসময় popup ব্যবহার করো (Vercel এর জন্য best)
+  const signInGoogle = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Google sign in success:', result.user.email);
+
+      await syncUserToBackend(result.user);
+      await fetchUserRole(result.user.email);
+
+      return result;
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const registerUser = async (email, password, displayName) => {
     setLoading(true);
     try {
@@ -84,28 +80,19 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
       );
-
-      // Update profile with display name
       if (displayName) {
         await updateProfile(userCredential.user, { displayName });
       }
-
-      // Save to backend
       await syncUserToBackend(userCredential.user);
       await fetchUserRole(email);
-
       return userCredential;
     } catch (error) {
-      console.error('Registration error:', error);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  // =========================
-  // Sign In with Email/Password
-  // =========================
   const signInUser = async (email, password) => {
     setLoading(true);
     try {
@@ -118,34 +105,12 @@ export const AuthProvider = ({ children }) => {
       await fetchUserRole(email);
       return userCredential;
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  // =========================
-  // Sign In with Google
-  // =========================
-  const signInGoogle = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await syncUserToBackend(result.user);
-      await fetchUserRole(result.user.email);
-      return result;
-    } catch (error) {
-      console.error('Google login error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // =========================
-  // Log Out
-  // =========================
   const logOut = async () => {
     setLoading(true);
     try {
@@ -156,87 +121,40 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // =========================
-  // Update User Profile
-  // =========================
-  const updateUserProfile = async profile => {
-    try {
-      await updateProfile(auth.currentUser, profile);
-      await syncUserToBackend(auth.currentUser);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-    }
-  };
-
-  // =========================
-  // Update User Role (Admin only - will be used by admin panel)
-  // =========================
-  const updateUserRole = async (email, newRole) => {
-    try {
-      const token = await user?.getIdToken();
-      const response = await fetch(`${API_URL}/api/users/${email}/role`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': application / json,
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      const data = await response.json();
-      if (data.success && user?.email === email) {
-        setUserRole(newRole);
-      }
-      return data;
-    } catch (error) {
-      console.error('Error updating role:', error);
-    }
-  };
-
-  // =========================
-  // Auth State Listener
-  // =========================
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async currentUser => {
       setUser(currentUser);
-
       if (currentUser) {
         await syncUserToBackend(currentUser);
         await fetchUserRole(currentUser.email);
       }
-
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const authInfo = {
-    user,
-    loading,
-    userRole,
-    registerUser,
-    signInUser,
-    signInGoogle,
-    logOut,
-    updateUserProfile,
-    updateUserRole,
-    fetchUserRole,
-    syncUserToBackend,
-  };
-
   return (
-    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        userRole,
+        registerUser,
+        signInUser,
+        signInGoogle,
+        logOut,
+        fetchUserRole,
+        syncUserToBackend,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
   );
 };
 
-// =========================
-// Custom hook with error checking
-// =========================
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 

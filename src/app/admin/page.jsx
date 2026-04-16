@@ -1,58 +1,121 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import {
+  Users,
+  Calendar,
+  CreditCard,
+  DollarSign,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/AuthContext/AuthProvider';
-import { Users, Calendar, CreditCard, TrendingUp, Shield } from 'lucide-react';
-import Link from 'next/link';
 
 export default function AdminDashboard() {
-  const { user, userRole, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalEvents: 0,
     totalPayments: 0,
     totalRevenue: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/login');
-      } else if (userRole !== 'admin') {
-        router.push('/dashboard');
-      } else {
-        fetchAdminStats();
-      }
+    if (user) {
+      fetchStats();
+    } else {
+      console.log('No user found, waiting for auth...');
     }
-  }, [user, userRole, loading, router]);
+  }, [user]);
 
-  const fetchAdminStats = async () => {
+  const fetchStats = async () => {
     try {
-      const token = await user.getIdToken();
-      const response = await fetch('/admin/api/stats', {
-        headers: { Authorization: `Bearer ${token}` },
+      setLoading(true);
+      setError(null);
+
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const token = await user?.getIdToken();
+
+      console.log('📡 Fetching stats from:', `${API_URL}/api/admin/stats`);
+      console.log('🔑 Token exists:', !!token);
+      console.log('👤 User email:', user?.email);
+
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      const res = await fetch(`${API_URL}/api/admin/stats`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
-      const data = await response.json();
-      if (data.success) {
+
+      console.log('📦 Response status:', res.status);
+
+      const data = await res.json();
+      console.log('📦 Response data:', data);
+
+      if (res.ok && data.success) {
         setStats(data.stats);
+      } else {
+        throw new Error(data.message || 'Failed to fetch stats');
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('❌ Error fetching stats:', error);
+      setError(error.message);
+      toast.error(error.message || 'Failed to load dashboard stats');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <p className="text-gray-500 mt-3">Loading dashboard data...</p>
       </div>
     );
   }
 
-  if (!user || userRole !== 'admin') {
-    return null;
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg
+            className="w-8 h-8 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+        </div>
+        <p className="text-red-600 font-medium mb-2">
+          Failed to load dashboard
+        </p>
+        <p className="text-gray-500 text-sm mb-4">{error}</p>
+        <button
+          onClick={fetchStats}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+        >
+          <RefreshCw className="w-4 h-4" /> Try Again
+        </button>
+      </div>
+    );
   }
 
   const statCards = [
@@ -60,118 +123,71 @@ export default function AdminDashboard() {
       title: 'Total Users',
       value: stats.totalUsers,
       icon: Users,
-      color: 'from-blue-500 to-blue-600',
       bg: 'bg-blue-50',
       textColor: 'text-blue-600',
+      iconBg: 'bg-blue-100',
     },
     {
       title: 'Total Events',
       value: stats.totalEvents,
       icon: Calendar,
-      color: 'from-green-500 to-green-600',
-      bg: 'bg-green-50',
-      textColor: 'text-green-600',
+      bg: 'bg-purple-50',
+      textColor: 'text-purple-600',
+      iconBg: 'bg-purple-100',
     },
     {
       title: 'Total Payments',
       value: stats.totalPayments,
       icon: CreditCard,
-      color: 'from-purple-500 to-purple-600',
-      bg: 'bg-purple-50',
-      textColor: 'text-purple-600',
+      bg: 'bg-green-50',
+      textColor: 'text-green-600',
+      iconBg: 'bg-green-100',
     },
     {
       title: 'Total Revenue',
       value: `$${stats.totalRevenue.toFixed(2)}`,
-      icon: TrendingUp,
-      color: 'from-orange-500 to-orange-600',
+      icon: DollarSign,
       bg: 'bg-orange-50',
       textColor: 'text-orange-600',
+      iconBg: 'bg-orange-100',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield className="w-6 h-6 text-purple-600" />
-            <span className="text-sm font-medium text-purple-600">
-              Admin Panel
-            </span>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back, {user.email}</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          Welcome back, {user?.displayName || user?.email?.split('@')[0]}!
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {statCards.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`${stat.bg} p-3 rounded-xl`}>
-                  <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
-                </div>
-                <span className={`text-2xl font-bold ${stat.textColor}`}>
-                  {stat.value}
-                </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {statCards.map((stat, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className={`${stat.iconBg} p-2.5 rounded-xl`}>
+                <stat.icon className={`w-5 h-5 ${stat.textColor}`} />
               </div>
-              <p className="text-gray-600 font-medium">{stat.title}</p>
+              <span className="text-2xl font-bold text-gray-900">
+                {stat.value}
+              </span>
             </div>
-          ))}
-        </div>
+            <p className="text-gray-600 font-medium text-sm">{stat.title}</p>
+          </motion.div>
+        ))}
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            href="/admin/users"
-            className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-all hover:scale-[1.02]"
-          >
-            <Users className="w-10 h-10 text-purple-600 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              User Management
-            </h3>
-            <p className="text-gray-500 text-sm mt-1">
-              View and manage all users
-            </p>
-          </Link>
-
-          <Link
-            href="/admin/events"
-            className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-all hover:scale-[1.02]"
-          >
-            <Calendar className="w-10 h-10 text-purple-600 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Event Management
-            </h3>
-            <p className="text-gray-500 text-sm mt-1">
-              View and manage all events
-            </p>
-          </Link>
-
-          <Link
-            href="/admin/payments"
-            className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-all hover:scale-[1.02]"
-          >
-            <CreditCard className="w-10 h-10 text-purple-600 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Payment Management
-            </h3>
-            <p className="text-gray-500 text-sm mt-1">View all transactions</p>
-          </Link>
-
-          <Link
-            href="/admin/analytics"
-            className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-all hover:scale-[1.02]"
-          >
-            <TrendingUp className="w-10 h-10 text-purple-600 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900">Analytics</h3>
-            <p className="text-gray-500 text-sm mt-1">
-              View platform analytics
-            </p>
-          </Link>
-        </div>
+      {/* Debug info - remove in production */}
+      <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
+        <p>🔧 Debug: API URL: {process.env.NEXT_PUBLIC_API_URL}</p>
+        <p>🔧 Debug: User logged in: {user?.email}</p>
       </div>
     </div>
   );

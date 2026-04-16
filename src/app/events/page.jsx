@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { Calendar, Search, AlertCircle } from 'lucide-react';
+import { Calendar, DollarSign, MapPin, Search, Filter } from 'lucide-react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [error, setError] = useState(null);
 
   const categories = [
     'all',
@@ -27,85 +29,85 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
+  useEffect(() => {
+    filterEvents();
+  }, [searchTerm, selectedCategory, events]);
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Use the correct API URL - remove /api if your backend doesn't have it
       const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const fullUrl = `${API_URL}/api/events`;
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://event-managements-server-chi.vercel.app/api';
+      const response = await axios.get(`${API_URL}/api/events`);
 
-      console.log('📡 Fetching events from:', fullUrl);
+      console.log('API Response:', response.data);
 
-      const response = await axios.get(fullUrl);
-      console.log('✅ Response:', response.data);
-
-      // Handle response data
+      // Handle different response formats
       let eventsData = [];
-      if (Array.isArray(response.data)) {
-        eventsData = response.data;
-      } else if (response.data?.data && Array.isArray(response.data.data)) {
+      if (response.data?.data && Array.isArray(response.data.data)) {
         eventsData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        eventsData = response.data;
       } else if (response.data?.events && Array.isArray(response.data.events)) {
         eventsData = response.data.events;
       }
 
+      console.log('Events data:', eventsData);
       setEvents(eventsData);
       setFilteredEvents(eventsData);
     } catch (error) {
-      console.error('❌ Error fetching events:', error);
-
-      if (error.code === 'ERR_NETWORK') {
-        setError(
-          '❌ Cannot connect to server. Please start the backend on port 5000',
-        );
-      } else if (error.response?.status === 404) {
-        setError(
-          '❌ API endpoint not found. Please check if backend has /api/events route',
-        );
-      } else if (error.response?.status === 503) {
-        setError('❌ Database connection failed. Please check MongoDB');
-      } else {
-        setError(error.message || 'Failed to load events');
-      }
-
-      setEvents([]);
-      setFilteredEvents([]);
+      console.error('Error fetching events:', error);
+      setError(error.message);
+      toast.error('Failed to load events');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter events
-  useEffect(() => {
-    const eventsArray = Array.isArray(events) ? events : [];
-    let filtered = [...eventsArray];
+  const filterEvents = () => {
+    // Ensure events is an array
+    let filtered = Array.isArray(events) ? [...events] : [];
 
     if (searchTerm) {
       filtered = filtered.filter(
         event =>
-          event?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          event?.shortDescription
+          event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.shortDescription
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()),
       );
     }
 
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(event => event?.category === selectedCategory);
+      filtered = filtered.filter(event => event.category === selectedCategory);
     }
 
     setFilteredEvents(filtered);
-  }, [searchTerm, selectedCategory, events]);
+  };
+
+  const getCategoryColor = category => {
+    const colors = {
+      Technology: 'bg-blue-100 text-blue-700',
+      Music: 'bg-purple-100 text-purple-700',
+      Business: 'bg-green-100 text-green-700',
+      Food: 'bg-orange-100 text-orange-700',
+      Art: 'bg-pink-100 text-pink-700',
+      Sports: 'bg-indigo-100 text-indigo-700',
+    };
+    return colors[category] || 'bg-gray-100 text-gray-700';
+  };
 
   if (loading) {
     return (
-      <div className="pt-24 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading events...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-purple-200 rounded-full"></div>
+          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+          <p className="text-center text-gray-500 mt-4">Loading events...</p>
         </div>
       </div>
     );
@@ -113,94 +115,119 @@ export default function EventsPage() {
 
   if (error) {
     return (
-      <div className="pt-24 min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-red-100">
-            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Connection Error!
-            </h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm font-semibold mb-2">To fix this:</p>
-              <p className="text-xs text-gray-600">1. Open terminal and run:</p>
-              <code className="text-xs bg-gray-200 px-2 py-1 rounded block mb-2">
-                cd C:\badhon\event-managements-server
-              </code>
-              <code className="text-xs bg-gray-200 px-2 py-1 rounded block">
-                node index.js
-              </code>
-            </div>
-            <button
-              onClick={fetchEvents}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-10 h-10 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Try Again
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
           </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Failed to Load Events
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={fetchEvents}
+            className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
-  const eventsToShow = Array.isArray(filteredEvents) ? filteredEvents : [];
-
   return (
-    <div className="pt-24 pb-16 min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-            Discover Events
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Hero Section */}
+      <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 py-20">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            Discover Amazing Events
           </h1>
-          <p className="text-lg text-gray-600">
-            Find the perfect event for you
+          <p className="text-lg text-white/90 max-w-2xl mx-auto">
+            Find and book the best events happening near you
           </p>
         </div>
+      </div>
 
-        {/* Search and Filter */}
-        <div className="mb-8 flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search events..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
+      {/* Search and Filter Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-2xl shadow-lg p-6 -mt-10 relative z-10">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search events by title, description..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <select
+                value={selectedCategory}
+                onChange={e => setSelectedCategory(e.target.value)}
+                className="pl-12 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white appearance-none cursor-pointer"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat === 'all' ? 'All Categories' : cat}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="md:w-64">
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500"
-            >
-              {categories.map(category => (
-                <option key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category}
-                </option>
-              ))}
-            </select>
+
+          {/* Results Count */}
+          <div className="mt-4 text-sm text-gray-500">
+            Found{' '}
+            <span className="font-semibold text-purple-600">
+              {filteredEvents.length}
+            </span>{' '}
+            events
           </div>
         </div>
+      </div>
 
-        <p className="text-gray-600 mb-6">
-          Showing {eventsToShow.length} events
-        </p>
-
-        {eventsToShow.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-xl text-gray-600">No events found</p>
+      {/* Events Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {filteredEvents.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No Events Found
+            </h3>
+            <p className="text-gray-500">
+              Try adjusting your search or filter criteria
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {eventsToShow.map(event => (
-              <Link
+            {filteredEvents.map((event, index) => (
+              <motion.div
                 key={event._id}
-                href={`/events/${event._id}`}
-                className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
               >
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative h-52 overflow-hidden">
                   <img
                     src={
                       event.image ||
@@ -208,29 +235,58 @@ export default function EventsPage() {
                     }
                     alt={event.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={e => {
+                      e.target.src =
+                        'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800';
+                    }}
                   />
-                  <div className="absolute top-4 right-4 bg-white px-3 py-1 rounded-full text-sm font-bold text-purple-600">
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-purple-600 shadow-lg">
                     ${event.price}
                   </div>
                   <div className="absolute bottom-4 left-4">
-                    <span className="px-3 py-1 bg-white/90 text-purple-600 text-xs rounded-full">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(event.category)}`}
+                    >
                       {event.category}
                     </span>
                   </div>
                 </div>
-                <div className="p-5">
+
+                <div className="p-6">
                   <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                     <Calendar className="w-4 h-4" />
-                    {new Date(event.date).toLocaleDateString()}
+                    <span>{new Date(event.date).toLocaleDateString()}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600">
+
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-1">
                     {event.title}
                   </h3>
-                  <p className="text-gray-600 line-clamp-2">
+
+                  <p className="text-gray-600 mb-4 line-clamp-2">
                     {event.shortDescription}
                   </p>
+
+                  <Link
+                    href={`/events/${event._id}`}
+                    className="inline-flex items-center text-purple-600 font-semibold hover:text-purple-700 transition-colors group/link"
+                  >
+                    View Details
+                    <svg
+                      className="w-4 h-4 ml-1 group-hover/link:translate-x-1 transition-transform"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </Link>
                 </div>
-              </Link>
+              </motion.div>
             ))}
           </div>
         )}

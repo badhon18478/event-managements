@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🎯 EventHub - Complete Event Management Platform
 
-## Getting Started
+A full-stack event management platform where users can discover, book, and
+manage events, while admins have complete control over the platform.
 
-First, run the development server:
+## 🌐 Live Demo
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Frontend:**
+  [https://event-managments.web.app](https://event-managments.web.app)
+- **Backend API:**
+  [https://event-managements-server-chi.vercel.app](https://event-managements-server-chi.vercel.app)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## ✨ Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 👤 User Features
 
-## Learn More
+| Feature            | Description                                      |
+| ------------------ | ------------------------------------------------ |
+| 🔐 Authentication  | Login/Register with Email/Password or Google     |
+| 📅 Browse Events   | Search, filter by category, view all events      |
+| 🔍 Event Details   | View complete event information with images      |
+| 💳 Book Events     | Secure payment with Stripe integration           |
+| 📊 User Dashboard  | View personal stats, events, and payment history |
+| 📝 Create Events   | Users can create and manage their own events     |
+| ✏️ Edit Events     | Update event details                             |
+| 🗑️ Delete Events   | Remove events created by user                    |
+| 💰 Payment History | Track all payments made                          |
 
-To learn more about Next.js, take a look at the following resources:
+### 👑 Admin Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Feature               | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| 📊 Admin Dashboard    | Platform overview with statistics              |
+| 👥 User Management    | View all users, promote to admin, block users  |
+| 📅 Event Management   | View all events, approve/reject, delete events |
+| 💵 Payment Management | Track all transactions, view revenue           |
+| ⚙️ Settings           | Admin preferences                              |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🛠️ Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Frontend
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Technology      | Purpose                         |
+| --------------- | ------------------------------- |
+| Next.js 14      | React framework with App Router |
+| Tailwind CSS    | Styling and responsive design   |
+| Framer Motion   | Animations                      |
+| Lucide React    | Icons                           |
+| React Hot Toast | Toast notifications             |
+
+### Backend
+
+| Technology     | Purpose             |
+| -------------- | ------------------- |
+| Node.js        | Runtime environment |
+| Express.js     | REST API framework  |
+| MongoDB        | Database            |
+| Firebase Admin | Authentication      |
+| Stripe         | Payment processing  |
+
+### Authentication
+
+- Firebase Authentication
+- Email/Password login
+- Google OAuth
+
+### Payment
+
+- Stripe Payment Gateway
+- Test mode support
+- Payment history tracking
+
+### Deployment
+
+- **Frontend:** Firebase Hosting
+- **Backend:** Vercel
+
+---
+
+## 📁 Project Structure

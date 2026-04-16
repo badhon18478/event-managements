@@ -51,7 +51,7 @@ function CheckoutForm({ eventId, amount, eventTitle }) {
           process.env.NEXT_PUBLIC_API_URL ||
           'https://event-managements-server-chi.vercel.app/api';
 
-        await fetch(`${API_URL}/payments`, {
+        await fetch(`${API_URL}/api/payments`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -146,13 +146,20 @@ export default function CheckoutContent() {
         process.env.NEXT_PUBLIC_API_URL ||
         'https://event-managements-server-chi.vercel.app/api';
 
-      const eventRes = await fetch(`${API_URL}/events/${eventId}`);
+      console.log(
+        '📡 Fetching event from:',
+        `${API_URL}/api/events/${eventId}`,
+      );
+
+      // Get event details
+      const eventRes = await fetch(`${API_URL}/api/events/${eventId}`);
       const eventData = await eventRes.json();
       const event = eventData.data || eventData;
       setEventDetails(event);
 
+      // Create payment intent
       const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/create-payment-intent`, {
+      const response = await fetch(`${API_URL}/api/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +180,7 @@ export default function CheckoutContent() {
 
       setClientSecret(data.clientSecret);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error:', error);
       toast.error(error.message);
       router.push('/events');
     } finally {
