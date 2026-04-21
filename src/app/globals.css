@@ -24,3 +24,45 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* মোবাইলের জন্য উন্নত টাচ এলাকা */
+@media (max-width: 640px) {
+  button,
+  [role='button'],
+  input,
+  select,
+  textarea {
+    font-size: 16px !important; /* জুম ইস্যু ফিক্স */
+  }
+
+  /* স্মুথ স্ক্রলিং */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* টাচ হাইলাইট রিমুভ */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* লোডিং অ্যানিমেশন */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.loading-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-size: 1000px 100%;
+}

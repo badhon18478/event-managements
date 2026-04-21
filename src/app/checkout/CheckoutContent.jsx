@@ -1,64 +1,83 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
   PaymentElement,
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import { stripePromise } from '../../lib/stripe';
 import { useAuth } from '../../AuthContext/AuthProvider';
-import { Loader2, ArrowLeft, CreditCard, Shield } from 'lucide-react';
+import {
+  Loader2,
+  ArrowLeft,
+  CreditCard,
+  Shield,
+  WifiOff,
+  RefreshCw,
+  Lock,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-function CheckoutForm({ eventId, amount, eventTitle, onSuccess }) {
+// Stripe পাবলিশেবল কী
+const STRIPE_PUBLISHABLE_KEY =
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+
+// ===============================
+// পেমেন্ট ফর্ম কম্পোনেন্ট
+// ===============================
+function PaymentForm({ eventId, amount, eventTitle, onSuccess, onError }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
   const { user } = useAuth();
-  const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  const [isReady, setIsReady] = useState(false);
+
+  // Stripe এবং Elements রেডি কিনা চেক করুন
+  useEffect(() => {
+    if (stripe && elements) {
+      setIsReady(true);
+      console.log('✅ Payment form ready');
+    }
+  }, [stripe, elements]);
 
   const handleSubmit = async e => {
     e.preventDefault();
 
-    // ✅ ভালো করে চেক করা
-    if (!stripe || !elements) {
-      toast.error('Payment system is initializing. Please wait...');
+    if (!isReady) {
+      toast.error('Payment form is initializing. Please wait...');
       return;
     }
 
     setProcessing(true);
-    setError(null);
+    setPaymentError(null);
 
     try {
-      const { error: submitError, paymentIntent } = await stripe.confirmPayment(
-        {
+      const { error: confirmError, paymentIntent } =
+        await stripe.confirmPayment({
           elements,
           confirmParams: {
             return_url: `${window.location.origin}/payment/success`,
           },
           redirect: 'if_required',
-        },
-      );
+        });
 
-      if (submitError) {
-        setError(submitError.message);
-        toast.error(submitError.message);
-        setProcessing(false);
-        return;
+      if (confirmError) {
+        throw new Error(confirmError.message);
       }
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
-        const token = await user.getIdToken();
-        // ✅ ফিক্স: API_URL এ /api নেই
         const API_URL =
           process.env.NEXT_PUBLIC_API_URL ||
           'https://event-managements-server-chi.vercel.app';
+        const token = await user.getIdToken();
 
-        // ✅ সঠিক URL (দুবার /api না)
         await fetch(`${API_URL}/api/payments`, {
           method: 'POST',
           headers: {
@@ -74,112 +93,262 @@ function CheckoutForm({ eventId, amount, eventTitle, onSuccess }) {
           }),
         });
 
-        toast.success('Payment successful!');
+        toast.success('Payment successful! 🎉');
         router.push('/payment/success');
       }
     } catch (err) {
       console.error('Payment error:', err);
-      setError(err.message);
+      setPaymentError(err.message);
       toast.error(err.message);
+      if (onError) onError(err.message);
+    } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-        <p className="text-sm text-gray-600">
-          Event: <span className="font-semibold">{eventTitle}</span>
-        </p>
-        <p className="text-lg font-bold text-purple-600">Total: ${amount}</p>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* ইভেন্ট সারাংশ */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
+        <div className="flex justify-between items-start mb-2">
+          <span className="text-xs text-purple-600 font-semibold uppercase tracking-wide">
+            Event
+          </span>
+        </div>
+        <h3 className="font-bold text-gray-900 text-base mb-3 line-clamp-2">
+          {eventTitle}
+        </h3>
+        <div className="pt-3 border-t border-purple-100">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Total Amount</span>
+            <span className="text-2xl font-bold text-purple-600">
+              ${amount}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <PaymentElement />
+      {/* কার্ড ডিটেইলস */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-2 p-4 border-b border-gray-100 bg-gray-50">
+          <CreditCard className="w-4 h-4 text-purple-600" />
+          <span className="font-semibold text-gray-700 text-sm">
+            Card Details
+          </span>
+        </div>
+        <div className="p-4">
+          <PaymentElement />
+        </div>
+      </div>
 
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-          {error}
+      {/* স্ট্যাটাস মেসেজ */}
+      {!isReady && (
+        <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 rounded-xl">
+          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+          <span className="text-sm text-blue-600">
+            Initializing secure form...
+          </span>
         </div>
       )}
 
+      {/* এরর মেসেজ */}
+      {paymentError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+          <span className="text-sm text-red-600">{paymentError}</span>
+        </div>
+      )}
+
+      {/* পে বাটন */}
       <button
         type="submit"
-        disabled={processing}
-        className={`w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg disabled:opacity-50 font-semibold text-lg transition-all ${
-          processing ? 'cursor-not-allowed' : 'cursor-pointer'
-        }`}
+        disabled={!isReady || processing}
+        className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
+          !isReady || processing
+            ? 'bg-gray-300 cursor-not-allowed opacity-60'
+            : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg active:scale-98'
+        } text-white`}
+        style={{ touchAction: 'manipulation' }}
       >
         {processing ? (
           <span className="flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 animate-spin" />
             Processing...
           </span>
+        ) : !isReady ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Loading...
+          </span>
         ) : (
-          `Pay $${amount}`
+          <span className="flex items-center justify-center gap-2">
+            <Lock className="w-4 h-4" />
+            Pay ${amount} Securely
+          </span>
         )}
       </button>
+
+      {/* সিকিউরিটি ব্যাজ */}
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <Shield className="w-3 h-3 text-gray-400" />
+        <span className="text-xs text-gray-400">256-bit SSL Secure</span>
+        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+        <span className="text-xs text-gray-400">Powered by Stripe</span>
+      </div>
     </form>
   );
 }
 
-export default function CheckoutContent() {
+// ===============================
+// লোডিং স্কেলেটন
+// ===============================
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-6 px-4">
+      <div className="max-w-md mx-auto">
+        {/* ব্যাক বাটন স্কেলেটন */}
+        <div className="h-8 w-24 bg-gray-200 rounded-lg mb-6 animate-pulse"></div>
+
+        {/* মেইন কার্ড স্কেলেটন */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="h-32 bg-gradient-to-r from-purple-100 to-pink-100 animate-pulse"></div>
+          <div className="p-6 space-y-5">
+            <div className="h-24 bg-gray-100 rounded-xl animate-pulse"></div>
+            <div className="h-48 bg-gray-100 rounded-xl animate-pulse"></div>
+            <div className="h-14 bg-gray-100 rounded-xl animate-pulse"></div>
+          </div>
+        </div>
+
+        <p className="text-center text-gray-400 text-sm mt-6 animate-pulse">
+          Loading secure checkout...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ===============================
+// এরর স্টেট
+// ===============================
+function ErrorState({ message, onRetry }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <WifiOff className="w-10 h-10 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          Unable to Load Page
+        </h2>
+        <p className="text-gray-500 mb-6">
+          {message || 'Something went wrong'}
+        </p>
+        <button
+          onClick={onRetry}
+          className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 mx-auto transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ===============================
+// মেইন চেকআউট কম্পোনেন্ট
+// ===============================
+export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
+
+  const [stripePromise, setStripePromise] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [eventDetails, setEventDetails] = useState(null);
-  const [stripeReady, setStripeReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const eventId = searchParams.get('eventId');
+  const initializedRef = useRef(false);
 
-  // ✅ Stripe প্রস্তুত কিনা চেক করা
+  // 1. Stripe লোড করুন
   useEffect(() => {
     const loadStripe = async () => {
-      await stripePromise;
-      setStripeReady(true);
+      try {
+        if (!STRIPE_PUBLISHABLE_KEY) {
+          throw new Error(
+            'Stripe key is missing. Please check environment variables.',
+          );
+        }
+        const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY);
+        setStripePromise(() => stripe);
+        console.log('✅ Stripe loaded');
+      } catch (err) {
+        console.error('Stripe error:', err);
+        setError(err.message);
+      }
     };
     loadStripe();
   }, []);
 
+  // 2. ইউজার চেক
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (user === undefined) return;
 
+    if (!user) {
+      router.push(`/login?redirect=/checkout?eventId=${eventId}`);
+    }
+  }, [user, eventId, router]);
+
+  // 3. ইভেন্ট আইডি চেক
+  useEffect(() => {
     if (!eventId) {
       toast.error('No event selected');
       router.push('/events');
-      return;
     }
+  }, [eventId, router]);
 
-    initializePayment();
-  }, [eventId, user]);
+  // 4. পেমেন্ট ইনিশিয়ালাইজ
+  useEffect(() => {
+    if (eventId && user && !initializedRef.current && stripePromise) {
+      initializedRef.current = true;
+      initializePayment();
+    }
+  }, [eventId, user, stripePromise]);
 
   const initializePayment = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      // ✅ ফিক্স: API_URL এ /api নেই
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL ||
         'https://event-managements-server-chi.vercel.app';
 
-      console.log(
-        '📡 Fetching event from:',
-        `${API_URL}/api/events/${eventId}`,
-      );
+      console.log('📡 Fetching event:', `${API_URL}/api/events/${eventId}`);
 
-      // Get event details
+      // ইভেন্ট ডিটেইলস আনুন
       const eventRes = await fetch(`${API_URL}/api/events/${eventId}`);
+
+      if (!eventRes.ok) {
+        throw new Error(`Failed to load event (${eventRes.status})`);
+      }
+
       const eventData = await eventRes.json();
       const event = eventData.data || eventData;
-      setEventDetails(event);
 
-      // Create payment intent
+      if (!event || !event.price) {
+        throw new Error('Invalid event data');
+      }
+
+      setEventDetails(event);
+      console.log('✅ Event loaded:', event.title);
+
+      // পেমেন্ট ইনটেন্ট ক্রিয়েট করুন
       const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/create-payment-intent`, {
+
+      const paymentRes = await fetch(`${API_URL}/api/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -192,131 +361,97 @@ export default function CheckoutContent() {
         }),
       });
 
-      const data = await response.json();
+      const paymentData = await paymentRes.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Payment initialization failed');
+      if (!paymentRes.ok) {
+        throw new Error(paymentData.message || 'Payment initialization failed');
       }
 
-      setClientSecret(data.clientSecret);
-    } catch (error) {
-      console.error('❌ Error:', error);
-      toast.error(error.message);
-      router.push('/events');
+      if (!paymentData.clientSecret) {
+        throw new Error('No client secret received');
+      }
+
+      setClientSecret(paymentData.clientSecret);
+      console.log('✅ Payment intent created');
+    } catch (err) {
+      console.error('❌ Error:', err);
+      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ লোডিং ইন্ডিকেটর
-  if (loading || !stripeReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
-        <div className="text-center">
-          <div className="relative inline-block">
-            <div className="w-16 h-16 border-4 border-purple-200 rounded-full"></div>
-            <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-          </div>
-          <p className="text-gray-500 mt-4">
-            {!stripeReady
-              ? 'Loading secure payment...'
-              : 'Preparing checkout...'}
-          </p>
-        </div>
-      </div>
-    );
+  const handleRetry = () => {
+    initializedRef.current = false;
+    setError(null);
+    setLoading(true);
+    initializePayment();
+  };
+
+  // লোডিং স্টেট
+  if (loading || !stripePromise) {
+    return <LoadingSkeleton />;
   }
 
+  // এরর স্টেট
+  if (error) {
+    return <ErrorState message={error} onRetry={handleRetry} />;
+  }
+
+  // ক্লায়েন্ট সিক্রেট না থাকলে
   if (!clientSecret || !eventDetails) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500">Failed to load payment details</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-gray-500">Preparing checkout...</p>
+        </div>
       </div>
     );
   }
 
+  // চেকআউট ফর্ম দেখান
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-4 px-4">
+      <div className="max-w-md mx-auto">
+        {/* ব্যাক বাটন */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-600 hover:text-purple-600 mb-6 transition-colors"
+          className="flex items-center gap-2 text-gray-600 hover:text-purple-600 mb-4 transition-colors py-2 px-1"
+          style={{ touchAction: 'manipulation' }}
         >
           <ArrowLeft className="w-5 h-5" />
-          Back to Event
+          <span className="text-sm">Back to Event</span>
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Order Summary
-              </h2>
-
-              <div className="flex gap-4 pb-4 border-b">
-                <img
-                  src={eventDetails.image}
-                  alt={eventDetails.title}
-                  className="w-20 h-20 rounded-xl object-cover"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">
-                    {eventDetails.title}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {eventDetails.category}
-                  </p>
-                </div>
-              </div>
-
-              <div className="py-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Ticket Price</span>
-                  <span className="font-semibold">${eventDetails.price}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-purple-600 text-lg">
-                    ${eventDetails.price}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center gap-2 text-xs text-gray-500">
-                <Shield className="w-4 h-4" />
-                Secure payment powered by Stripe
-              </div>
+        {/* চেকআউট কার্ড */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* হেডার */}
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-8 text-white text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <CreditCard className="w-8 h-8" />
             </div>
+            <h1 className="text-2xl font-bold">Complete Payment</h1>
+            <p className="text-white/80 text-sm mt-1">Secure checkout</p>
           </div>
 
-          <div className="lg:col-span-2 order-1 lg:order-2">
-            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Complete Payment
-                  </h1>
-                  <p className="text-sm text-gray-500">
-                    Enter your card details
-                  </p>
-                </div>
-              </div>
-
-              {clientSecret && (
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <CheckoutForm
-                    eventId={eventId}
-                    amount={eventDetails.price}
-                    eventTitle={eventDetails.title}
-                  />
-                </Elements>
-              )}
-            </div>
+          {/* ফর্ম */}
+          <div className="p-6">
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <PaymentForm
+                eventId={eventId}
+                amount={eventDetails.price}
+                eventTitle={eventDetails.title}
+              />
+            </Elements>
           </div>
         </div>
+
+        {/* হেল্প টেক্সট */}
+        <p className="text-center text-xs text-gray-400 mt-6">
+          Need help? Contact support@eventhub.com
+        </p>
       </div>
     </div>
   );
