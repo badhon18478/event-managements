@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/AuthContext/AuthProvider';
-
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { loadStripe } from '@stripe/stripe-js';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../AuthContext/AuthProvider';
 export default function StripeCheckoutButton({ event }) {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();

@@ -4,7 +4,8 @@
 import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { AuthContext } from '@/AuthContext/AuthProvider';
+// import { AuthContext } from '@/AuthContext/AuthProvider';
+import { AuthContext } from '../../AuthContext/AuthProvider';
 import toast from 'react-hot-toast';
 import {
   Calendar,

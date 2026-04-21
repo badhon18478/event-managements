@@ -8,12 +8,12 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import { stripePromise } from '@/lib/stripe';
-import { useAuth } from '@/AuthContext/AuthProvider';
+import { stripePromise } from '../../lib/stripe';
+import { useAuth } from '../../AuthContext/AuthProvider';
 import { Loader2, ArrowLeft, CreditCard, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-function CheckoutForm({ eventId, amount, eventTitle }) {
+function CheckoutForm({ eventId, amount, eventTitle, onSuccess }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -24,12 +24,14 @@ function CheckoutForm({ eventId, amount, eventTitle }) {
   const handleSubmit = async e => {
     e.preventDefault();
 
+    // ✅ ভালো করে চেক করা
     if (!stripe || !elements) {
-      toast.error('Payment system not ready');
+      toast.error('Payment system is initializing. Please wait...');
       return;
     }
 
     setProcessing(true);
+    setError(null);
 
     try {
       const { error: submitError, paymentIntent } = await stripe.confirmPayment(
@@ -45,12 +47,18 @@ function CheckoutForm({ eventId, amount, eventTitle }) {
       if (submitError) {
         setError(submitError.message);
         toast.error(submitError.message);
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        setProcessing(false);
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
         const token = await user.getIdToken();
+        // ✅ ফিক্স: API_URL এ /api নেই
         const API_URL =
           process.env.NEXT_PUBLIC_API_URL ||
-          'https://event-managements-server-chi.vercel.app/api';
+          'https://event-managements-server-chi.vercel.app';
 
+        // ✅ সঠিক URL (দুবার /api না)
         await fetch(`${API_URL}/api/payments`, {
           method: 'POST',
           headers: {
@@ -73,7 +81,6 @@ function CheckoutForm({ eventId, amount, eventTitle }) {
       console.error('Payment error:', err);
       setError(err.message);
       toast.error(err.message);
-    } finally {
       setProcessing(false);
     }
   };
@@ -97,8 +104,10 @@ function CheckoutForm({ eventId, amount, eventTitle }) {
 
       <button
         type="submit"
-        disabled={!stripe || processing}
-        className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg disabled:opacity-50 font-semibold text-lg transition-all"
+        disabled={processing}
+        className={`w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg disabled:opacity-50 font-semibold text-lg transition-all ${
+          processing ? 'cursor-not-allowed' : 'cursor-pointer'
+        }`}
       >
         {processing ? (
           <span className="flex items-center justify-center gap-2">
@@ -120,8 +129,18 @@ export default function CheckoutContent() {
   const [clientSecret, setClientSecret] = useState(null);
   const [loading, setLoading] = useState(true);
   const [eventDetails, setEventDetails] = useState(null);
+  const [stripeReady, setStripeReady] = useState(false);
 
   const eventId = searchParams.get('eventId');
+
+  // ✅ Stripe প্রস্তুত কিনা চেক করা
+  useEffect(() => {
+    const loadStripe = async () => {
+      await stripePromise;
+      setStripeReady(true);
+    };
+    loadStripe();
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -142,9 +161,10 @@ export default function CheckoutContent() {
     try {
       setLoading(true);
 
+      // ✅ ফিক্স: API_URL এ /api নেই
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL ||
-        'https://event-managements-server-chi.vercel.app/api';
+        'https://event-managements-server-chi.vercel.app';
 
       console.log(
         '📡 Fetching event from:',
@@ -188,14 +208,19 @@ export default function CheckoutContent() {
     }
   };
 
-  if (loading) {
+  // ✅ লোডিং ইন্ডিকেটর
+  if (loading || !stripeReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-purple-200 rounded-full"></div>
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-          <p className="text-center text-gray-500 mt-4">
-            Preparing checkout...
+        <div className="text-center">
+          <div className="relative inline-block">
+            <div className="w-16 h-16 border-4 border-purple-200 rounded-full"></div>
+            <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+          </div>
+          <p className="text-gray-500 mt-4">
+            {!stripeReady
+              ? 'Loading secure payment...'
+              : 'Preparing checkout...'}
           </p>
         </div>
       </div>
@@ -203,7 +228,11 @@ export default function CheckoutContent() {
   }
 
   if (!clientSecret || !eventDetails) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Failed to load payment details</p>
+      </div>
+    );
   }
 
   return (
@@ -276,13 +305,15 @@ export default function CheckoutContent() {
                 </div>
               </div>
 
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm
-                  eventId={eventId}
-                  amount={eventDetails.price}
-                  eventTitle={eventDetails.title}
-                />
-              </Elements>
+              {clientSecret && (
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <CheckoutForm
+                    eventId={eventId}
+                    amount={eventDetails.price}
+                    eventTitle={eventDetails.title}
+                  />
+                </Elements>
+              )}
             </div>
           </div>
         </div>

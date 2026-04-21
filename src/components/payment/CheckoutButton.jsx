@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/AuthContext/AuthProvider';
+// import { useAuth } from '@/AuthContext/AuthProvider';
 import toast from 'react-hot-toast';
-
+import { useAuth } from '../../AuthContext/AuthProvider';
 export default function CheckoutButton({ event }) {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();

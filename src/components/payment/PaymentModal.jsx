@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from '@/lib/stripe';
 import CheckoutForm from './CheckoutForm';
-import { useAuth } from '@/AuthContext/AuthProvider';
+// import { useAuth } from '@/AuthContext/AuthProvider';
 import { Loader2, X } from 'lucide-react';
-
+import { useAuth } from '../../AuthContext/AuthProvider';
 export default function PaymentModal({ event, onClose }) {
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(false);

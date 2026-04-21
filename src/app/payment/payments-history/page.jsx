@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/AuthContext/AuthProvider';
-
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { useAuth } from '../../../AuthContext/AuthProvider';
+import { Calendar, CreditCard, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 export default function PaymentsHistoryPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();

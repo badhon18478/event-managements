@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/AuthContext/AuthProvider';
+// import { useAuth } from '@/AuthContext/AuthProvider';
 import { Shield, Bell, Mail, Globe, Save, Loader2, Menu } from 'lucide-react';
 import toast from 'react-hot-toast';
-
+import { useAuth } from '../../../AuthContext/AuthProvider';
 export default function AdminSettingsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();

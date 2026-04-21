@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/AuthContext/AuthProvider';
-import Sidebar from '@/components/layout/Sidebar';
+// import { useAuth } from '@/AuthContext/AuthProvider';
+// import Sidebar from '@/components/layout/Sidebar';
+import { useAuth } from '../../AuthContext/AuthProvider';
+import Sidebar from '../../components/layout/Sidebar';
 import {
   Calendar,
   CreditCard,

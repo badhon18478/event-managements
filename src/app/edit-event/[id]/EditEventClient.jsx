@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
-import { useAuth } from '@/AuthContext/AuthProvider';
-import { getEventById, updateEvent } from '@/lib/api';
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { getEventById, updateEvent } from '../../../lib/api';
+import { useAuth } from '../../../AuthContext/AuthProvider';
 import { Loader2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 

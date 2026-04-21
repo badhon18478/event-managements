@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/AuthContext/AuthProvider';
-import Sidebar from '@/components/layout/Sidebar';
-import { getEventsByUser, deleteEvent } from '@/lib/api';
+// import { useAuth } from '@/AuthContext/AuthProvider';
+// import { Calendar, DollarSign, Users, Loader2 } from 'lucide-react';
+import { useAuth } from '../../../AuthContext/AuthProvider';
+import Sidebar from '../../../components/layout/Sidebar';
+import { getEventsByUser, deleteEvent } from '../../../lib/api';
 import {
   Calendar,
   DollarSign,

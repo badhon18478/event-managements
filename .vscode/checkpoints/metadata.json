@@ -6,5 +6,44 @@
     "isIncremental": false,
     "totalSize": 170097389,
     "incrementalSize": 170097389
+  },
+  "quick_2026-04-18T18-59-08": {
+    "timestamp": "2026-04-18T18-59-08",
+    "description": "Quick checkpoint",
+    "fileCount": 1261,
+    "isIncremental": false,
+    "totalSize": 534860352,
+    "incrementalSize": 534860352
+  },
+  "quick_2026-04-18T19-00-02": {
+    "timestamp": "2026-04-18T19-00-02",
+    "description": "Quick checkpoint",
+    "fileCount": 20,
+    "isIncremental": true,
+    "baseCheckpoint": "quick_2026-04-18T18-59-08",
+    "changedFiles": [
+      ".next/dev/cache/turbopack/c573e8c4/00001062.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001063.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001064.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001065.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001066.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001067.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001068.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001069.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001070.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001071.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001072.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001073.sst",
+      ".next/dev/cache/turbopack/c573e8c4/00001074.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001075.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001076.meta",
+      ".next/dev/cache/turbopack/c573e8c4/00001077.meta",
+      ".next/dev/cache/turbopack/c573e8c4/CURRENT",
+      ".next/dev/cache/turbopack/c573e8c4/LOG",
+      ".next/dev/logs/next-development.log",
+      ".next/dev/trace"
+    ],
+    "totalSize": 538657052,
+    "incrementalSize": 3796700
   }
 }

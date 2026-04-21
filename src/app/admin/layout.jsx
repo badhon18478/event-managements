@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/AuthContext/AuthProvider';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import { useAuth } from '../../AuthContext/AuthProvider';
+import AdminSidebar from '../../components/admin/AdminSidebar';
 import { Menu } from 'lucide-react';
 
 export default function AdminLayout({ children }) {

@@ -11,8 +11,9 @@ import {
   LogOut,
   X,
 } from 'lucide-react';
-import { useAuth } from '@/AuthContext/AuthProvider';
+// import { useAuth } from '@/AuthContext/AuthProvider';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../AuthContext/AuthProvider';
 
 export default function AdminSidebar({ isOpen, onClose }) {
   const pathname = usePathname();

@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/AuthContext/AuthProvider';
-import Sidebar from '@/components/layout/Sidebar';
-import { getUserPayments } from '@/lib/api';
+// import { useAuth } from '@/AuthContext/AuthProvider';
+// import Sidebar from '@/components/layout/Sidebar';
+import { useAuth } from '../../../AuthContext/AuthProvider';
+import Sidebar from '../../../components/layout/Sidebar';
+import { getUserPayments } from '../../../lib/api';
 import { CreditCard, Download, Calendar, Search, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

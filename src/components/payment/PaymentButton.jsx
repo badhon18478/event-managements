@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from '@/lib/stripe';
 import CheckoutForm from './CheckoutForm';
-import { useAuth } from '@/AuthContext/AuthProvider';
-
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { useAuth } from '../../AuthContext/AuthProvider';
 export default function PaymentButton({ event }) {
   const [showPayment, setShowPayment] = useState(false);
   const [clientSecret, setClientSecret] = useState('');

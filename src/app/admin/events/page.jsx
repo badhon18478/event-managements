@@ -14,8 +14,8 @@ import {
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useAuth } from '@/AuthContext/AuthProvider';
-
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { useAuth } from '../../../AuthContext/AuthProvider';
 export default function AdminEventsPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);

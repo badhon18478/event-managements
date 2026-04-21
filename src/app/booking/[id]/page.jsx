@@ -3,9 +3,9 @@
 
 import { useState, useContext } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContext } from '@/AuthContext/AuthProvider';
+// import { AuthContext } from '@/AuthContext/AuthProvider';
 import toast from 'react-hot-toast';
-
+import { AuthContext } from '../../../AuthContext/AuthProvider';
 export default function BookingPage({ params }) {
   const { user } = useContext(AuthContext);
   const router = useRouter();

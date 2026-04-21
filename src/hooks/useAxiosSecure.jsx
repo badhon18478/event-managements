@@ -3,7 +3,8 @@
 import { useContext, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { AuthContext } from '@/AuthContext/AuthProvider';
+// import { AuthContext } from '@/AuthContext/AuthProvider';
+import { AuthContext } from '../AuthContext/AuthProvider';
 import { toast } from 'react-hot-toast';
 
 const useAxiosSecure = () => {

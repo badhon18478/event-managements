@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getAllEvents, deleteEvent } from '@/lib/api'; // getAllEvents ইম্পোর্ট করুন
-import { useAuth } from '@/AuthContext/AuthProvider';
+import { getAllEvents, deleteEvent } from '../../../lib/api'; // getAllEvents ইম্পোর্ট করুন
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { useAuth } from '../../../AuthContext/AuthProvider';
 
 export default function ManageEventsPage() {
   const { user, loading: authLoading } = useAuth();

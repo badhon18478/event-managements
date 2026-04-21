@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import useAxiosSecure from '@/hooks/useAxiosSecure';
-import { useAuth } from '@/AuthContext/AuthProvider'; // আপনার পাথ অনুযায়ী ঠিক করুন
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useAuth } from '../../../AuthContext/AuthProvider'; // আপনার পাথ অনুযায়ী ঠিক করুন
 
 export default function AddEventPage() {
   const { user, loading: authLoading } = useAuth();

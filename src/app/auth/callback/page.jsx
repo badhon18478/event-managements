@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRedirectResult } from 'firebase/auth';
-import { auth } from '@/lib/firebase.init';
+import { auth } from '../../../lib/firebase.init';
 
 export default function AuthCallback() {
   const router = useRouter();

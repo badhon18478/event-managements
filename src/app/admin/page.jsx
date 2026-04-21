@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useAuth } from '@/AuthContext/AuthProvider';
-
+// import { useAuth } from '@/AuthContext/AuthProvider';
+import { useAuth } from '../../AuthContext/AuthProvider';
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({

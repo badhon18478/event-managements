@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/AuthContext/AuthProvider';
-import Sidebar from '@/components/layout/Sidebar';
+// import { useAuth } from '@/AuthContext/AuthProvider';
+// import Sidebar from '@/components/layout/Sidebar';
+import { useAuth } from '../../../AuthContext/AuthProvider';
+import Sidebar from '../../../components/layout/Sidebar';
 import { User, Mail, Bell, Shield, Save, Loader2, Menu } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
